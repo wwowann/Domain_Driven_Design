@@ -1,6 +1,6 @@
 package DDD.Servise;
 
-import Customers.PersonPet;
+import DDD.Entity.PersonPet;
 
 public class QueuePetSurdeon {
       private final PersonPet personPet;

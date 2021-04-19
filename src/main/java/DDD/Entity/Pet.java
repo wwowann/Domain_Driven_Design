@@ -1,7 +1,7 @@
 package DDD.Entity;
 
-import Clinic.Registry.TypeOfVisit;
-import Clinic.SymptomsDisease.SymptomsDisease;
+import DDD.Repository.TypeOfVisit;
+import DDD.Servise.SymptomsDisease;
 
 import java.io.File;
 

@@ -1,8 +1,9 @@
 package DDD.Entity;
 
 import DDD.Repository.TypeOfVisit;
-import DDD.Servise.SymptomsDisease;
+import DDD.Servise.HistoryDisease;
 import DDD.Servise.LoggerInHistoryDisease;
+import DDD.Servise.SymptomsDisease;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,7 +12,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Clinic {
-    Deque<PersonPet> petRegistries = new ArrayDeque<>(10);
+    Deque<PersonPet> petRegistries = new LinkedList<>();
     List<PersonPet> petSurgeons = new ArrayList<>();
     List<PersonPet> petTherapists = new ArrayList<>();
     Deque<PersonPet> personPetTemporary = new ArrayDeque<>();
@@ -20,15 +21,16 @@ public class Clinic {
     public LoggerInHistoryDisease logger = new LoggerInHistoryDisease();
     private final ReentrantLock lock = new ReentrantLock();
     private final ReentrantLock lock1 = new ReentrantLock();
-    private final ReentrantLock lock2 = new ReentrantLock();
-    private final Condition customerRegistry = lock2.newCondition();
+    //    private final ReentrantLock lock2 = new ReentrantLock();
+    private final Condition customerRegistry = lock.newCondition();
     private final Condition customerTherapist = lock.newCondition();
     private final Condition customerSurgeon = lock.newCondition();
 
     public void customer(PersonPet personPet) {
         lock.lock();
+
         personPet.getPet().setTreatmentDecision(getTreatmentDecision(personPet.getPet().getSymptomeDisease()));
-        if (TypeOfVisit.URGENT_VISIT != personPet.getPet().getTypeOfVisit()) {//если срочный визит
+        if (personPet.getPet().getTypeOfVisit() != TypeOfVisit.URGENT_VISIT) {//если срочный визит
             personPetTemporary.add(personPet);
         } else {
             personPetTemporary.addFirst(personPet);
@@ -37,22 +39,29 @@ public class Clinic {
         try {
             System.out.println(Thread.currentThread().getName() +
                     " пришел посетитель, их всего " + personPetTemporary.size());
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         } finally {
             lock.unlock();
         }
-        lock2.lock();
-        if (personPetTemporary.size() > 0) {
-            while (!lock2.tryLock()){
-            customerRegistry.signal();}
-        }
+
+//        if (personPetTemporary.size() > 0) {
+//            while (!lock2.tryLock()){
+        //}
+//        }
         try {
             System.out.println("клиент " + Thread.currentThread().getName() + " сигнал в регистратуру отправил, ждет регистрации");
+            lock.lock();
+            customerRegistry.signal();
             customerRegistry.await();
             System.out.println(Thread.currentThread().getName() + " клиент получил направление и может дальше идти по врачам");
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            lock2.unlock();
+            lock.unlock();
             System.out.println(Thread.currentThread().getName() + " предыдущий поток разблокирован, новый клиент может пройти в регистратуру");
         }
         lock.lock();
@@ -60,24 +69,23 @@ public class Clinic {
         System.out.println(Thread.currentThread().getName() + " получил направление ко врачу "
                 + personPet.getPet().getTreatmentDecision());
         try {
-//            if (personPet.getPet().getTreatmentDecision().equals("направление к терапевту")) {
-//                petTherapists.add(petRegistries.poll());//передача пациента терапевту
-//                System.out.println("количестов посетителей к терапевту после " +
-//                        "передачи клиента терапевту" + petTherapists.size());
-//                try {
-//                    Thread.sleep(2000);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//                customerTherapist.signal();
-//                try {
-//                    customerTherapist.await();
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//                System.out.println(Thread.currentThread().getName() + " пациент закончил прием у терапевта");
-//            } else
-            if (personPet.getPet().getTreatmentDecision().equals("направление к хирургу")) {
+            if (personPet.getPet().getTreatmentDecision().equals("направление к терапевту")) {
+                petTherapists.add(petRegistries.poll());//передача пациента терапевту
+                System.out.println("количестов посетителей к терапевту после " +
+                        "передачи клиента терапевту" + petTherapists.size());
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                customerTherapist.signal();
+                try {
+                    customerTherapist.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread().getName() + " пациент закончил прием у терапевта");
+            } else if (personPet.getPet().getTreatmentDecision().equals("направление к хирургу")) {
                 System.out.println(Thread.currentThread().getName() + " условие  Если к хирургу сработало?");
                 System.out.println(Thread.currentThread().getName() + " petRegistries.getFirst()= " + petRegistries.size());
                 petSurgeons.add(petRegistries.getFirst());
@@ -118,52 +126,57 @@ public class Clinic {
     }
 
     public void appointmentCustomer() {//запись на прием
-        lock2.lock();
-        while (personPetTemporary.size() > 0) {
-            System.out.println(Thread.currentThread().getName() + " поток регистратора заблокирован. Размер желающих полечиться " + personPetTemporary.size());
+        System.out.println("baba Manja " + personPetTemporary.size());
+
+//        while (true) {
+//        lock.lock();
+        if (personPetTemporary.size() == 0) {
+            System.out.println(Thread.currentThread().getName() + " регистратор ждет посетителей");
             try {
-                if (personPetTemporary.size() == 0) {
-                    System.out.println(Thread.currentThread().getName() + " регистратор ждет посетителей");
-                    customerRegistry.await();
-                    System.out.println(Thread.currentThread().getName() + " регистратор должен был ждать посетителей но заработал");
-                }
-                petRegistries.add(personPetTemporary.poll());
-                System.out.println("Перед формированием файла petRegistries размер = " + petRegistries.size() + " + " + personPetTemporary.size());
+
+                customerRegistry.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            } finally {
-                while (!lock2.tryLock()) {
-                    customerRegistry.signal();
-                }
-                lock2.unlock();
-
-                File fileName = new File(petRegistries.element().getPet().getKindOfAnimal()
-                        + "_" + petRegistries.element().getPet().getNickname() + ".txt");//создается название медицинской книги
-                try {
-                    if (fileName.createNewFile()) {
-                        System.out.println(Thread.currentThread().getName() + " должен был создаться файл с именем " + petRegistries.getFirst().getPet().getHistoryDisease());
-                        System.out.println(Thread.currentThread().getName() + " книга учета истории болезни создана");
-                    }
-                } catch (IOException ex) {
-                    System.out.println(Thread.currentThread().getName() + " Книга учета истории болезни животного уже имеется в архиве");
-                }
-                logger.log("история болезни " + petRegistries.element().getPet().getKindOfAnimal()
-                        + " " + petRegistries.element().getPet().getNickname(), fileName);
-                logger.log("жалобы: " + petRegistries.element().getPet().getSymptomeDisease().getTitle(), fileName);
-                String msg = petRegistries.element().getPet().getTreatmentDecision();
-                logger.log(msg, fileName); //логируется результат направления к нужному специалисту
-                System.out.println(Thread.currentThread().getName() + " после приема очередь зарегистрированных равна " + petRegistries.size());
-                //дается сигнал посетителю,  получил направление и что ему нужно следовать дальше
-                System.out.println(Thread.currentThread().getName() + " Следующий посетитель может пройти в регистратуру");
-
-                //регистратор снова свободен и готов принимать новых пациентов
-                System.out.println(Thread.currentThread().getName() + " закончил регистрацию" +
-                        " и готов принять посетиля. поток регистратора разблокировался");
             }
         }
-        System.out.println("Регистратор закончил работу, клиенты закончились");
+        System.out.println("baba Manja Manaj" + personPetTemporary.size());
+        petRegistries.add(personPetTemporary.poll());
+        try {
+            Thread.sleep(4000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            System.out.println("Перед формированием файла petRegistries размер = " + petRegistries.size() + " + " + personPetTemporary.size());
 
+        }
+
+        File fileName = new File(petRegistries.element().getPet().getKindOfAnimal()
+                + "_" + petRegistries.element().getPet().getNickname() + ".txt");//создается название медицинской книги
+        try {
+            if (fileName.createNewFile()) {
+                System.out.println(Thread.currentThread().getName() + " должен был создаться файл с именем " + petRegistries.getFirst().getPet().getHistoryDisease());
+                System.out.println(Thread.currentThread().getName() + " книга учета истории болезни создана");
+            }
+        } catch (IOException ex) {
+            System.out.println(Thread.currentThread().getName() + " Книга учета истории болезни животного уже имеется в архиве");
+        }
+        logger.log("история болезни " + petRegistries.element().getPet().getKindOfAnimal()
+                + " " + petRegistries.element().getPet().getNickname(), fileName);
+        logger.log("жалобы: " + petRegistries.element().getPet().getSymptomeDisease().getTitle(), fileName);
+        String msg = petRegistries.element().getPet().getTreatmentDecision();
+        logger.log(msg, fileName); //логируется результат направления к нужному специалисту
+        System.out.println(Thread.currentThread().getName() + " после приема очередь зарегистрированных равна " + petRegistries.size());
+        //дается сигнал посетителю,  получил направление и что ему нужно следовать дальше
+        System.out.println(Thread.currentThread().getName() + " Следующий посетитель может пройти в регистратуру");
+
+        //регистратор снова свободен и готов принимать новых пациентов
+
+        customerRegistry.signal();
+//        lock.unlock();
+        System.out.println("Регистратор готов принять нового посетителя");
     }
+//    }
+
 
     public void treatmentByTherapist() {
         if (petTherapists.size() == 0) {

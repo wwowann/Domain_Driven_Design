@@ -1,7 +1,5 @@
 package DDD.Entity;
 
-import DDD.Pet;
-
 public class PersonPet {
     private final Person person;
     private final Pet pet;

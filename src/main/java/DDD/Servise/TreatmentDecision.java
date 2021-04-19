@@ -1,7 +1,5 @@
 package DDD.Servise;
 
-import Clinic.SymptomsDisease.SymptomsDisease;
-
 public enum TreatmentDecision {
     TREATMENT_BY_A_THERAPIST("направление к терапевту"),
     TREATMENT_BY_A_SURGEON("направление к хирургу");

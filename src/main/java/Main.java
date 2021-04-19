@@ -1,41 +1,43 @@
 import DDD.Entity.Clinic;
-import Clinic.Employees.Registrar;
-import DDD.Repository.SpecialityEmployee;
-import DDD.Repository.TypeOfVisit;
-import DDD.Servise.SymptomsDisease;
 import DDD.Entity.Person;
 import DDD.Entity.PersonPet;
 import DDD.Entity.Pet;
+import DDD.Repository.TypeOfVisit;
+import DDD.Servise.SymptomsDisease;
 
 
 public class Main {
     public static void main(String[] args) {
         Clinic clinic = new Clinic();
-        Registrar registrar = new Registrar("Зоя", "Федоровна", SpecialityEmployee.REGISTRAR);
+//        Registrar registrar = new Registrar("Зоя", "Федоровна", SpecialityEmployee.REGISTRAR);
+
+
         PersonPet personPet = new PersonPet(new Person(
                 "urij", "12324",
                 "Юрий", "Юрьев", 1234567890),
                 new Pet("собака", "Барбоскин",
                         3.5, "черный", null,
                         null, TypeOfVisit.BY_APPOINTMENT, SymptomsDisease.INJURY, null));
-       PersonPet personPet1 = new PersonPet(new Person(
+        PersonPet personPet1 = new PersonPet(new Person(
                 "vasja", "12324",
                 "Василий", "Васильев", 1234567890),
                 new Pet("кошка", "Фурия",
                         2.3, "рыжий", null, null,
                         TypeOfVisit.URGENT_VISIT, SymptomsDisease.INJURY, null));
-
         new Thread(() -> {
             clinic.customer(personPet);
         }).start();
-
-        new Thread(() -> {
-            clinic.customer(personPet1);
-        }).start();
+        System.out.println("посетитель пришел в поликлиннику");
         new Thread(null, clinic::treatmentBySurgeon, "хирург Плейшнер").start();
+        System.out.println("хирург Плейшнер вышел на работу");
 //        new Thread(null, clinic::treatmentByTherapist, "терапевт Таблеткин").start();
         new Thread(null, clinic::appointmentCustomer, "регистратор Баба Маня").start();
-    }
+        System.out.println("регистратор баба Маня вышла на работу");
+
+//        new Thread(() -> {
+//            clinic.customer(personPet1);
+//        }).start();
+
 //        Map<String, Customer> customerMap = new HashMap<>();
 //        Customer customer = null;
 //        AutorisationCustomer autorisationCustomer = new AutorisationCustomer();
@@ -101,4 +103,4 @@ public class Main {
 //        String bankAccount = scan.nextLine();
 //        return new String[] {nickname, password, name, surname, bankAccount};
 //    }
-}
+}}
